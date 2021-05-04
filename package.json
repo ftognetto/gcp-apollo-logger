@@ -1,6 +1,6 @@
 {
   "name": "@quantos/gcp-apollo-logger",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Google cloud stackdriver logging integration for Apollo",
   "author": "fabriziotognetto <info@quantos.it>",
   "main": "dist/index.js",

@@ -1,6 +1,5 @@
 import winston from 'winston';
 import { LoggingWinston } from '@google-cloud/logging-winston';
-import { Request } from 'express';
 import { GraphQLError, GraphQLFormattedError } from 'graphql';
 import { ApolloError, Context } from 'apollo-server-core';
 
@@ -29,7 +28,7 @@ const _initLogger = () => {
 
 // Metodo principale
 // Formatta e scrive i log
-const _handleLog = (severity: 'ERROR' | 'WARNING' | 'INFO', message: string, error?: Error, req?: Request)  => {
+const _handleLog = (severity: 'ERROR' | 'WARNING' | 'INFO', message: string, error?: Error)  => {
 
 
   if (!logger) { _initLogger(); }

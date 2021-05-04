@@ -42,7 +42,7 @@ const _handleLog = (severity: 'ERROR' | 'WARNING' | 'INFO', message: string, err
 };
 
 export const GcpApolloLogger = {
-    formatError: (error: GraphQLError, context: Context): GraphQLFormattedError<Record<string, any>> => {
+    formatError: (error: GraphQLError): GraphQLFormattedError<Record<string, any>> => {
         if (error.originalError instanceof ApolloError) {
             _handleLog('WARNING', error.message, error.originalError); // faccio un warn perchè Apollo error corrisponde a un 4xx error (utente)
             return error;

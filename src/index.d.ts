@@ -1,1 +1,1 @@
-declare module '@inordine/graphql-utils';
+declare module '@quantos/gcp-apollo-logger';

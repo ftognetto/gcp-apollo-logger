@@ -1,10 +1,10 @@
 {
   "name": "@quantos/gcp-apollo-logger",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Google cloud stackdriver logging integration for Apollo",
   "author": "fabriziotognetto <info@quantos.it>",
   "main": "dist/index.js",
-  "repository": "github:quantosapplications/gcp-apollo-logging",
+  "repository": "github:quantosapplications/gcp-apollo-logger",
   "scripts": {
     "build": "tsc"
   },

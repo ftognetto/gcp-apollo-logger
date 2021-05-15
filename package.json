@@ -1,6 +1,6 @@
 {
   "name": "@quantos/gcp-apollo-logger",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Google cloud stackdriver logging integration for Apollo",
   "author": "fabriziotognetto <info@quantos.it>",
   "main": "dist/index.js",
@@ -9,9 +9,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@google-cloud/logging-winston": "^4.0.4",
-    "apollo-server": "^2.21.0",
-    "winston": "^3.3.3"
+    "@quantos/gcp-logger": "^1.0.4",
+    "apollo-server-plugin-base": "^0.12.0"
   },
   "devDependencies": {
     "@types/graphql": "^14.5.0",

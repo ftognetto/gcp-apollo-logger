@@ -1,55 +1,27 @@
-import winston from 'winston';
-import { LoggingWinston } from '@google-cloud/logging-winston';
-import { GraphQLError, GraphQLFormattedError } from 'graphql';
-import { ApolloError, Context } from 'apollo-server-core';
+import { ApolloServerPlugin, BaseContext } from 'apollo-server-plugin-base';
+import { GcpLogger } from '@quantos/gcp-logger';
 
-let loggingWinston: LoggingWinston;
-let logger: winston.Logger;
+export class GcpApolloLoggerPlugin implements ApolloServerPlugin {
 
-const _initLogger = () => {
+  requestDidStart = (ctx: BaseContext) => {
 
-  // serviceContext se è valorizzato riporta gli errori anche su Error Reporting
-  const serviceContext = process.env.SERVICE_NAME ? { service: process.env.SERVICE_NAME } : undefined;
+    if (ctx.request.operationName === 'IntrospectionQuery') { return {}; }
 
-  loggingWinston = new LoggingWinston({
-    serviceContext
-  });
+    let _log = `Started request ${ctx.request.query}`;
+    if (ctx.request.variables) { _log += ' with variables ' + JSON.stringify(ctx.request.variables); }
+    GcpLogger.log(_log, ctx.context.req, ctx.context.reqUser);
 
-  // Transports - se in debug scriviamo anche nella console
-  const transports: winston.transport[] = [];
-  if (process.env.NODE_ENV === 'development') { transports.push(new winston.transports.Console()); }
-  transports.push(loggingWinston);
-
-  logger = winston.createLogger({
-    level: 'info',
-    transports
-  });
-};
-
-// Metodo principale
-// Formatta e scrive i log
-const _handleLog = (severity: 'ERROR' | 'WARNING' | 'INFO', message: string, error?: Error)  => {
-
-
-  if (!logger) { _initLogger(); }
-
-  switch (severity) {
-    case 'ERROR': logger.error(message, error || new Error(message)); break;
-    case 'WARNING': logger.warn(message, error || new Error(message)); break;
-    default: logger.info(message + ' - ' + error ? JSON.stringify(error) : ''); break;
-  }
-  
-};
-
-export const GcpApolloLogger = {
-    formatError: (error: GraphQLError): GraphQLFormattedError<Record<string, any>> => {
-        if (error.originalError instanceof ApolloError) {
-            _handleLog('WARNING', error.message, error.originalError); // faccio un warn perchè Apollo error corrisponde a un 4xx error (utente)
-            return error;
+    return {
+      willSendResponse: (resCtx: BaseContext) => {
+        if (resCtx.errors) {
+          GcpLogger.error(resCtx.errors[0], resCtx.context.req, resCtx.context.reqUser);
         }
         else {
-            _handleLog('ERROR', error.message, error.originalError);
-            return process.env.NODE_ENV === 'production' ? { message: 'Internal Server Error' } : error;
+          let _reslog = `Finished request ${resCtx.request.query}`;
+          if (resCtx.request.variables) { _reslog += ' with variables ' + JSON.stringify(resCtx.request.variables); }
+          GcpLogger.log(_reslog, resCtx.context.req, resCtx.context.reqUser);
         }
-    }
+      }
+    };
+  }
 }

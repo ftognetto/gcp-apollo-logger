@@ -1,4 +1,4 @@
-import { ApolloServerPlugin, BaseContext, GraphQLRequestContext, GraphQLRequestContextWillSendResponse } from 'apollo-server-plugin-base';
+import { ApolloServerPlugin, BaseContext, GraphQLRequest, GraphQLRequestContext, GraphQLRequestContextWillSendResponse } from 'apollo-server-plugin-base';
 import winston from 'winston';
 import { LoggingWinston } from '@google-cloud/logging-winston';
 
@@ -12,8 +12,21 @@ let _extractUserFromContext: (ctx: BaseContext) => any | undefined;
 const _extractOperationNameFromContext = (ctx: GraphQLRequestContext): string | undefined => {
   if (ctx.request.operationName) { return ctx.request.operationName; }
   else if (ctx.request.query) { 
-    // TODO tirare fuori il nome della query query { getEntity(..) { ... } } => getEntity
+    // tira fuori il nome della query query { getEntity(..) { ... } } => getEntity
+    let opName = ctx.request.query.replace(/\n/g, ' ');
+    opName = opName.substring(0, opName.indexOf('('));
+    opName = opName.replace('{', '');
+    opName = opName.trim();
+    return opName;
   }
+};
+
+const _extractGraphqlRequestMetadata = (request: GraphQLRequest): any => {
+  return {
+    operationName: request.operationName,
+    query: request.query,
+    variables: request.variables
+  };
 };
 
 // Inizializzazione del logger
@@ -54,22 +67,22 @@ const _handleLog = (log: Object | string | Error, severity: 'ERROR' | 'WARNING' 
 
     // Http request info
     metadata.httpRequest = {
-      status: severity === 'ERROR' ? 500 : severity === 'WARNING' ? 400 : 200,
-      requestUrl: `${ctx.context.req.protocol}://${ctx.context.req.hostname}${ctx.context.req.originalUrl}`,
-      requestMethod: ctx.context.req.method,
-      remoteIp: ctx.context.req.socket.remoteAddress,
-      requestSize: ctx.context.req.socket.bytesRead,
-      userAgent: ctx.context.req.headers && ctx.context.req.headers['user-agent']
+      status: ctx.response?.http.status || severity === 'ERROR' ? 500 : severity === 'WARNING' ? 400 : 200,
+      requestUrl: (ctx.request.http.headers && ctx.request.http.headers.get('host')) ? ctx.request.http.headers.get('host') : undefined,
+      requestMethod: 'POST',
+      requestSize: (ctx.request.http.headers && ctx.request.http.headers.get('content-length')) ? ctx.request.http.headers.get('content-length') : undefined,
+      userAgent: ctx.request.http.headers && ctx.request.http.headers.get('user-agent')
     };
 
     // Tracing
-    if (ctx.context.req.headers && ctx.context.req.headers['X-Cloud-Trace-Context']) {
-      const [trace] = `${ctx.context.req.headers['X-Cloud-Trace-Context']}`.split('/');
+    if (ctx.request.http.headers && ctx.request.http.headers.get('X-Cloud-Trace-Context')) {
+      const [trace] = `${ctx.request.http.headers.get('X-Cloud-Trace-Context')}`.split('/');
       metadata.httpRequest[LoggingWinston.LOGGING_TRACE_KEY] = `projects/${process.env.PROJECT_ID}/traces/${trace}`;
     }
 
     // Graphql request
-    metadata.graphqlRequest = ctx.request;
+    metadata.graphqlRequest = _extractGraphqlRequestMetadata(ctx.request);
+    
   }
 
   if (reqUser) {
@@ -126,7 +139,7 @@ export class GcpApolloLoggerPlugin implements ApolloServerPlugin {
           }
         }
         else {
-          _handleLog('Finished request', 'INFO', resCtx.context.req);
+          _handleLog('Finished request', 'INFO', resCtx);
         }
       }
     };
